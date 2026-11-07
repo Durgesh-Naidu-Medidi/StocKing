@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'add_stock_screen.dart';
 import 'search_screen.dart';
+import 'screens/stock_details_screen.dart';
 import 'stock_model.dart';
 import 'dart:async';
 import 'services/live_stock_service.dart';
@@ -46,6 +46,8 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState
     extends State<HomeScreen> {
 
+      Timer? _refreshTimer;
+
   void addStock(StockModel stock) {
 
     setState(() {
@@ -58,20 +60,26 @@ class _HomeScreenState
   final LiveStockService stockService =
     LiveStockService();
 
-  @override
+@override
 void initState() {
   super.initState();
 
   loadWatchlist();
-  Timer.periodic(
 
-  const Duration(seconds: 10),
+  _refreshTimer = Timer.periodic(
+    const Duration(seconds: 10),
+    (timer) {
+      if (mounted) {
+        refreshPrices();
+      }
+    },
+  );
+}
 
-  (timer) {
-
-    refreshPrices();
-  },
-);
+@override
+void dispose(){
+  _refreshTimer?.cancel();
+  super.dispose();
 }
 
 Future<void> saveWatchlist() async {
@@ -100,7 +108,7 @@ Future<void> loadWatchlist() async {
   final List<String>? stockList =
       prefs.getStringList('watchlist');
 
-  if (stockList != null) {
+  if (stockList != null && mounted) {
 
     setState(() {
 
@@ -181,6 +189,8 @@ highestPrice:
   }
 
   saveWatchlist();
+
+  if (!mounted) return;
 
   setState(() {});
 }
@@ -596,22 +606,20 @@ Widget premiumStockCard({
 
   return GestureDetector(
 
-    onTap: () {
+   onTap: () {
+  final selectedStock = watchlist.firstWhere(
+    (item) => item.stockName == stock,
+  );
 
-      Navigator.push(
-        context,
-
-        MaterialPageRoute(
-          builder: (context) =>
-              AddStockScreen(
-
-            stockName: stock,
-
-            onAdd: (stock) {},
-          ),
-        ),
-      );
-    },
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => StockDetailsScreen(
+        stock: selectedStock,
+      ),
+    ),
+  );
+},
 
     child: Container(
       padding: const EdgeInsets.all(18),

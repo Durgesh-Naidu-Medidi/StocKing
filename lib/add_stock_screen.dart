@@ -1,6 +1,8 @@
+
 import 'package:flutter/material.dart';
 import 'stock_model.dart';
 import 'services/live_stock_service.dart';
+
 class AddStockScreen extends StatefulWidget {
   final Function(StockModel) onAdd;
   final String stockName;
@@ -12,200 +14,180 @@ class AddStockScreen extends StatefulWidget {
   });
 
   @override
-  State<AddStockScreen> createState() =>
-      _AddStockScreenState();
+  State<AddStockScreen> createState() => _AddStockScreenState();
 }
 
-class _AddStockScreenState
-    extends State<AddStockScreen> {
+class _AddStockScreenState extends State<AddStockScreen> {
+  final TextEditingController buyPriceController =
+      TextEditingController();
 
-  final TextEditingController
-      buyPriceController =
-          TextEditingController();
+  final TextEditingController targetPriceController =
+      TextEditingController();
 
-  final TextEditingController
-      targetPriceController =
-          TextEditingController();
+  final LiveStockService stockService = LiveStockService();
 
-  final LiveStockService stockService =
-      LiveStockService();
+  bool _isAdding = false;
+
+  @override
+  void dispose() {
+    buyPriceController.dispose();
+    targetPriceController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _addStock() async {
+    final buyPrice = double.tryParse(buyPriceController.text.trim());
+    final targetPrice =
+        double.tryParse(targetPriceController.text.trim());
+
+    if (buyPrice == null || buyPrice <= 0 ||
+        targetPrice == null || targetPrice <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter valid buy and target prices.'),
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _isAdding = true;
+    });
+
+    try {
+      final livePrice = await stockService.fetchPrice(widget.stockName);
+
+      if (!mounted) return;
+
+      if (livePrice <= 0) {
+        throw Exception('Unable to retrieve a valid stock price.');
+      }
+
+      final stock = StockModel(
+        stockName: widget.stockName,
+        buyPrice: buyPriceController.text.trim(),
+        targetPrice: targetPriceController.text.trim(),
+        currentPrice: livePrice,
+        highestPrice: livePrice,
+      );
+
+      widget.onAdd(stock);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Stock Added Successfully'),
+        ),
+      );
+
+      Navigator.pop(context);
+    } catch (error) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Unable to add stock: $error'),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isAdding = false;
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-
     return Scaffold(
       backgroundColor: const Color(0xFF050505),
-
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-
         title: Text(
           widget.stockName,
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-          ),
+          style: const TextStyle(fontWeight: FontWeight.bold),
         ),
       ),
-
       body: Padding(
         padding: const EdgeInsets.all(20),
-
         child: Column(
-          crossAxisAlignment:
-              CrossAxisAlignment.start,
-
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-
             const SizedBox(height: 20),
-
             const Text(
-              "Buy Price",
-              style: TextStyle(
-                fontSize: 18,
-                color: Colors.white70,
-              ),
+              'Buy Price',
+              style: TextStyle(fontSize: 18, color: Colors.white70),
             ),
-
             const SizedBox(height: 12),
-
             TextField(
               controller: buyPriceController,
-
-              keyboardType:
-                  TextInputType.number,
-
-              style: const TextStyle(
-                color: Colors.white,
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
               ),
-
+              style: const TextStyle(color: Colors.white),
               decoration: InputDecoration(
                 filled: true,
-                fillColor:
-                    const Color(0xFF151515),
-
+                fillColor: const Color(0xFF151515),
                 border: OutlineInputBorder(
-                  borderRadius:
-                      BorderRadius.circular(18),
-
+                  borderRadius: BorderRadius.circular(18),
                   borderSide: BorderSide.none,
                 ),
-
-                hintText: "Enter buy price",
-
-                hintStyle: const TextStyle(
-                  color: Colors.grey,
-                ),
+                hintText: 'Enter buy price',
+                hintStyle: const TextStyle(color: Colors.grey),
               ),
             ),
-
             const SizedBox(height: 30),
-
             const Text(
-              "Target Price",
-              style: TextStyle(
-                fontSize: 18,
-                color: Colors.white70,
-              ),
+              'Target Price',
+              style: TextStyle(fontSize: 18, color: Colors.white70),
             ),
-
             const SizedBox(height: 12),
-
             TextField(
-              controller:
-                  targetPriceController,
-
-              keyboardType:
-                  TextInputType.number,
-
-              style: const TextStyle(
-                color: Colors.white,
+              controller: targetPriceController,
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
               ),
-
+              style: const TextStyle(color: Colors.white),
               decoration: InputDecoration(
                 filled: true,
-                fillColor:
-                    const Color(0xFF151515),
-
+                fillColor: const Color(0xFF151515),
                 border: OutlineInputBorder(
-                  borderRadius:
-                      BorderRadius.circular(18),
-
+                  borderRadius: BorderRadius.circular(18),
                   borderSide: BorderSide.none,
                 ),
-
-                hintText:
-                    "Enter target price",
-
-                hintStyle: const TextStyle(
-                  color: Colors.grey,
-                ),
+                hintText: 'Enter target price',
+                hintStyle: const TextStyle(color: Colors.grey),
               ),
             ),
-
             const SizedBox(height: 40),
-
             SizedBox(
               width: double.infinity,
-          
-
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor:
-                      Colors.greenAccent,
-
+                  backgroundColor: Colors.greenAccent,
                   shape: RoundedRectangleBorder(
-                    borderRadius:
-                        BorderRadius.circular(18),
+                    borderRadius: BorderRadius.circular(18),
                   ),
                 ),
-
-                onPressed: () async {
-
-  final livePrice =
-      await stockService.fetchPrice(
-    widget.stockName,
-  );
-
-  final stock = StockModel(
-
-    stockName: widget.stockName,
-
-    buyPrice:
-        buyPriceController.text,
-
-    targetPrice:
-        targetPriceController.text,
-
-    currentPrice: livePrice,
-    highestPrice: livePrice,
-  );
-
-  widget.onAdd(stock);
-
-  ScaffoldMessenger.of(context)
-      .showSnackBar(
-
-    const SnackBar(
-      content: Text(
-        "Stock Added Successfully",
-      ),
-    ),
-  );
-
-  Navigator.pop(context);
-},
-
-                child: const Text(
-                  "Add Stock",
-
-                  style: TextStyle(
-                    color: Colors.black,
-                    fontSize: 18,
-                    fontWeight:
-                        FontWeight.bold,
-                  ),
-                ),
+                onPressed: _isAdding ? null : _addStock,
+                child: _isAdding
+                    ? const SizedBox(
+                        height: 22,
+                        width: 22,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.black,
+                        ),
+                      )
+                    : const Text(
+                        'Add Stock',
+                        style: TextStyle(
+                          color: Colors.black,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
               ),
             ),
           ],

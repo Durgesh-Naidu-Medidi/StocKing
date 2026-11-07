@@ -1,31 +1,37 @@
+
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class StockApiService {
+  // Replace with a newly generated API key.
+  final String apiKey = '9c79a47fc0974ea8b0ff7575f0e4674';
 
   Future<double> fetchStockPrice(String symbol) async {
-
-    final url = Uri.parse(
-      'https://api.twelvedata.com/price?symbol=$symbol&apikey=9c79a47fc0974ea8b0ff7575f0e4674f',
+    final url = Uri.https(
+      'api.twelvedata.com',
+      '/price',
+      {
+        'symbol': symbol,
+        'apikey': apiKey,
+      },
     );
 
     final response = await http.get(url);
 
-    if (response.statusCode == 200) {
-
-      final data = jsonDecode(response.body);
-
-      print(data);
-
-      if (data['price'] != null) {
-        return double.parse(data['price']);
-      }
-
-      return 0;
+    if (response.statusCode != 200) {
+      throw Exception(
+        'Failed to load stock price: ${response.statusCode}',
+      );
     }
 
-    else {
-      throw Exception('Failed to load stock price');
+    final data = jsonDecode(response.body);
+
+    if (data['price'] == null) {
+      throw Exception(
+        data['message'] ?? 'Stock price is unavailable.',
+      );
     }
+
+    return double.parse(data['price'].toString());
   }
 }
